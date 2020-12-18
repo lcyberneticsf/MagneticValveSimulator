@@ -13,6 +13,7 @@
 #include	<queue>
 #include	<string>
 #include	<io.h>
+#pragma comment(lib,"Version.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -34,6 +35,8 @@ class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg();
+	virtual BOOL OnInitDialog();
+	void  GetVersion(CString &ver);
 
 // 对话框数据
 	enum { IDD = IDD_ABOUTBOX };
@@ -44,6 +47,8 @@ public:
 // 实现
 protected:
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnBnClickedOk();
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(CAboutDlg::IDD)
@@ -56,8 +61,75 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+	ON_BN_CLICKED(IDOK, &CAboutDlg::OnBnClickedOk)
 END_MESSAGE_MAP()
 
+void CAboutDlg::OnBnClickedOk()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	CDialogEx::OnOK();
+}
+
+
+BOOL CAboutDlg::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+	CString strVersion;
+	GetVersion(strVersion);
+	CString strVersionInfo;
+	strVersionInfo.Format("版本号:%s", strVersion);
+	GetDlgItem(IDC_STATIC_VERSION)->SetWindowTextA(strVersionInfo);
+	return true;
+}
+void CAboutDlg::GetVersion(CString &ver)
+{
+	DWORD dwInfoSize = 0;
+	TCHAR exePath[MAX_PATH];
+	memset(exePath, 0, sizeof(exePath));
+
+	ver.Format(_T("V1.00"));
+
+	// 得到程序的自身路径
+	GetModuleFileName(NULL, exePath, sizeof(exePath) / sizeof(TCHAR));
+
+	// 判断是否能获取版本号
+	dwInfoSize = GetFileVersionInfoSize(exePath, NULL);
+
+	if (dwInfoSize == 0)
+	{
+		::OutputDebugString("GetFileVersionInfoSize fail\r\n");
+	}
+	else
+	{
+		BYTE* pData = new BYTE[dwInfoSize];
+
+		// 获取版本信息
+		if (!GetFileVersionInfo(exePath, NULL, dwInfoSize, pData))
+		{
+			::OutputDebugString("GetFileVersionInfo fail\r\n");
+		}
+		else
+		{
+			// 查询版本信息中的具体键值
+			LPVOID lpBuffer;
+			UINT uLength;
+			if (!::VerQueryValue((LPCVOID)pData, _T("\\"), &lpBuffer, &uLength))
+			{
+				::OutputDebugString("GetFileVersionInfo fail\r\n");
+			}
+			else
+			{
+				DWORD dwVerMS;
+				DWORD dwVerLS;
+				dwVerMS = ((VS_FIXEDFILEINFO*)lpBuffer)->dwProductVersionMS;
+				dwVerLS = ((VS_FIXEDFILEINFO*)lpBuffer)->dwProductVersionLS;
+				ver.Format(_T("V%d.%d.%d.%d"), (dwVerMS >> 16), (dwVerMS & 0xFFFF), (dwVerLS >> 16), (dwVerLS & 0xFFFF));
+			}
+		}
+
+		delete pData;
+	}
+}
 
 // CFiberDetectControlDlg 对话框
 
@@ -2550,3 +2622,6 @@ void CFiberDetectControlDlg::OnSize(UINT nType, int cx, int cy)
 	// TODO:  在此处添加消息处理程序代码
 	RedrawWindow();
 }
+
+
+
